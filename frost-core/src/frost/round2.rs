@@ -160,8 +160,8 @@ fn compute_signature_share<C: Ciphersuite>(
     key_package: &keys::KeyPackage<C>,
     challenge: Challenge<C>,
 ) -> SignatureShare<C> {
-    let z_share: <<C::Group as Group>::Field as Field>::Scalar = signer_nonces.hiding.0
-        + (signer_nonces.binding.0 * binding_factor.0)
+    let z_share: <<C::Group as Group>::Field as Field>::Scalar = signer_nonces.hiding.0 .0
+        + (signer_nonces.binding.0 .0 * binding_factor.0)
         + (lambda_i * key_package.signing_share.0 * challenge.0);
 
     SignatureShare::<C> { share: z_share }

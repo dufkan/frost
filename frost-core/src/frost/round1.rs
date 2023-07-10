@@ -12,18 +12,19 @@ use hex::FromHex;
 use rand_core::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
-use crate::{
-    frost, Ciphersuite, Deserialize, Element, Error, Field, Group, Header, Scalar, Serialize,
-};
+use crate::{frost, Ciphersuite, Deserialize, Element, Error, Field, Group, Header, Serialize};
 
 #[cfg(feature = "serde")]
 use crate::ElementSerialization;
 
-use super::{keys::SigningShare, Identifier};
+use super::{keys::SigningShare, Identifier, SerializableScalar};
 
 /// A scalar that is a signing nonce.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Nonce<C: Ciphersuite>(pub(super) Scalar<C>);
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound = "C: Ciphersuite"))]
+#[cfg_attr(feature = "serde", serde(deny_unknown_fields))]
+pub struct Nonce<C: Ciphersuite>(pub(super) SerializableScalar<C>);
 
 impl<C> Nonce<C>
 where
@@ -62,7 +63,7 @@ where
             .cloned()
             .collect();
 
-        Self(C::H3(input.as_slice()))
+        Self(SerializableScalar::new(C::H3(input.as_slice())))
     }
 
     /// Deserialize [`Nonce`] from bytes
@@ -70,13 +71,13 @@ where
         bytes: <<C::Group as Group>::Field as Field>::Serialization,
     ) -> Result<Self, Error<C>> {
         <<C::Group as Group>::Field>::deserialize(&bytes)
-            .map(|scalar| Self(scalar))
+            .map(|scalar| Self(SerializableScalar::new(scalar)))
             .map_err(|e| e.into())
     }
 
     /// Serialize [`Nonce`] to bytes
     pub fn serialize(&self) -> <<C::Group as Group>::Field as Field>::Serialization {
-        <<C::Group as Group>::Field>::serialize(&self.0)
+        <<C::Group as Group>::Field>::serialize(&self.0 .0)
     }
 }
 
@@ -85,7 +86,7 @@ where
     C: Ciphersuite,
 {
     fn zeroize(&mut self) {
-        *self = Nonce(<<C::Group as Group>::Field>::zero());
+        self.0.zeroize()
     }
 }
 
@@ -177,7 +178,7 @@ where
     C: Ciphersuite,
 {
     fn from(nonce: &Nonce<C>) -> Self {
-        Self(<C::Group>::generator() * nonce.0)
+        Self(<C::Group>::generator() * nonce.0 .0)
     }
 }
 
@@ -205,6 +206,9 @@ where
 /// operation; re-using nonces will result in leakage of a signer's long-lived
 /// signing key.
 #[derive(Clone, Zeroize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound = "C: Ciphersuite"))]
+#[cfg_attr(feature = "serde", serde(deny_unknown_fields))]
 pub struct SigningNonces<C: Ciphersuite> {
     /// The hiding [`Nonce`].
     pub(crate) hiding: Nonce<C>,

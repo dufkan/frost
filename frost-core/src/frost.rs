@@ -21,6 +21,7 @@ mod identifier;
 pub mod keys;
 pub mod round1;
 pub mod round2;
+mod serializable_scalar;
 
 use crate::{
     scalar_mul::VartimeMultiscalarMul, Ciphersuite, Deserialize, Element, Error, Field, Group,
@@ -28,6 +29,7 @@ use crate::{
 };
 
 pub use self::identifier::Identifier;
+pub use self::serializable_scalar::SerializableScalar;
 
 /// The binding factor, also known as _rho_ (ρ)
 ///
